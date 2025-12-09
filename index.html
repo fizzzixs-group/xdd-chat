@@ -1,0 +1,1170 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XDD Chat - Liquid Glass Messenger</title>
+    <style>
+        /* ========================================================= */
+        /* CSS: Цветовые Переменные & Liquid Glass Стили */
+        /* ========================================================= */
+
+        :root {
+            /* Светлая (Default) Тема */
+            --background-color: #f0f2f5;
+            --surface-color: #e3e6ec;
+            --text-color: #1a1a2e;
+            --text-secondary: #5a5a70;
+            --accent-color: #4a90e2;
+            --accent-light: #6faaf7;
+            --shadow-light: #ffffff;
+            --shadow-dark: #b8c4d6;
+            --glass-bg: rgba(255, 255, 255, 0.4);
+            --glass-border: rgba(255, 255, 255, 0.7);
+            --glass-backdrop: blur(10px);
+            --chat-bubble-self: var(--accent-color);
+            --chat-bubble-other: var(--surface-color);
+            --chat-text-self: #ffffff;
+            --chat-text-other: var(--text-color);
+            --error-color: #e74c3c;
+        }
+
+        /* Тёмная Тема */
+        .theme-dark {
+            --background-color: #1a1a2e;
+            --surface-color: #2c2c54;
+            --text-color: #f0f0f0;
+            --text-secondary: #aaaaaa;
+            --accent-color: #6faaf7;
+            --accent-light: #89b4f4;
+            --shadow-light: #3e3e5c;
+            --shadow-dark: #121223;
+            --glass-bg: rgba(44, 44, 84, 0.4);
+            --glass-border: rgba(44, 44, 84, 0.7);
+            --chat-bubble-self: var(--accent-color);
+            --chat-bubble-other: var(--surface-color);
+            --chat-text-self: #1a1a2e;
+            --chat-text-other: var(--text-color);
+        }
+
+        /* Контрастная Тема */
+        .theme-contrast {
+            --background-color: #111111;
+            --surface-color: #333333;
+            --text-color: #f0f0f0;
+            --text-secondary: #cccccc;
+            --accent-color: #ffcc00;
+            --accent-light: #ffee58;
+            --shadow-light: #555555;
+            --shadow-dark: #000000;
+            --glass-bg: rgba(51, 51, 51, 0.6);
+            --glass-border: rgba(100, 100, 100, 0.8);
+            --chat-bubble-self: var(--accent-color);
+            --chat-bubble-other: var(--surface-color);
+            --chat-text-self: #111111;
+            --chat-text-other: var(--text-color);
+        }
+
+        /* Общие Стили */
+        * {
+            box-sizing: border-box;
+            transition: all 0.4s ease-in-out; /* Плавные переходы */
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(135deg, var(--surface-color) 0%, var(--background-color) 100%);
+            color: var(--text-color);
+        }
+
+        /* Glassmorphism для контейнеров */
+        .glass-container {
+            background: var(--glass-bg);
+            border-radius: 24px;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+            backdrop-filter: var(--glass-backdrop);
+            -webkit-backdrop-filter: var(--glass-backdrop);
+            border: 1px solid var(--glass-border);
+            padding: 20px;
+        }
+
+        /* Neumorphism для интерактивных элементов */
+        .neumorph-btn, .neumorph-input {
+            border: none;
+            border-radius: 12px;
+            padding: 10px 20px;
+            font-size: 1em;
+            cursor: pointer;
+            box-shadow: 6px 6px 12px var(--shadow-dark), -6px -6px 12px var(--shadow-light);
+            background: var(--surface-color);
+            color: var(--text-color);
+            transition: all 0.3s ease-in-out;
+        }
+
+        .neumorph-btn:focus, .neumorph-input:focus {
+            outline: none;
+            box-shadow: inset 2px 2px 5px var(--shadow-dark), inset -2px -2px 5px var(--shadow-light);
+        }
+
+        .neumorph-btn:hover {
+            box-shadow: 4px 4px 8px var(--shadow-dark), -4px -4px 8px var(--shadow-light);
+        }
+
+        .neumorph-btn:active {
+            box-shadow: inset 4px 4px 8px var(--shadow-dark), inset -4px -4px 8px var(--shadow-light);
+            transform: scale(0.98);
+        }
+
+        .accent-btn {
+            background: var(--accent-color);
+            color: white;
+            box-shadow: 6px 6px 12px rgba(74, 144, 226, 0.3), -6px -6px 12px var(--shadow-light);
+        }
+
+        .accent-btn:hover {
+            background: var(--accent-light);
+        }
+
+        /* ========================================================= */
+        /* Структура Приложения */
+        /* ========================================================= */
+
+        #app-container {
+            width: 90%;
+            max-width: 1200px;
+            height: 90vh;
+            max-height: 800px;
+        }
+
+        #auth-view {
+            width: 400px;
+            height: auto;
+            min-height: 450px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-around;
+            padding: 30px;
+            margin: auto;
+        }
+
+        .auth-form input {
+            width: 100%;
+            margin-bottom: 15px;
+            padding: 15px;
+        }
+
+        .auth-form button {
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .error-message {
+            color: var(--error-color);
+            margin-bottom: 15px;
+            font-weight: bold;
+            animation: pulse 0.5s ease-in-out;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0; transform: scale(0.9); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+
+        /* ========================================================= */
+        /* Main Chat View */
+        /* ========================================================= */
+
+        #chat-view {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            height: 100%;
+            gap: 20px;
+            padding: 0;
+        }
+
+        #chat-list-container, #active-chat-container {
+            border-radius: 24px;
+            padding: 20px;
+        }
+
+        #chat-list-container {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        #chat-search {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+        }
+
+        #chat-list {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding-right: 10px;
+            /* Скроллбар */
+            scrollbar-width: thin;
+            scrollbar-color: var(--accent-color) var(--glass-bg);
+        }
+
+        #chat-list::-webkit-scrollbar {
+            width: 8px;
+        }
+        #chat-list::-webkit-scrollbar-thumb {
+            background-color: var(--accent-color);
+            border-radius: 4px;
+        }
+        #chat-list::-webkit-scrollbar-track {
+            background-color: var(--glass-bg);
+        }
+
+        .chat-card {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            margin-bottom: 8px;
+            border-radius: 18px;
+            background: var(--surface-color);
+            cursor: pointer;
+            box-shadow: 4px 4px 8px var(--shadow-dark), -4px -4px 8px var(--shadow-light);
+        }
+
+        .chat-card:hover {
+            box-shadow: 2px 2px 4px var(--shadow-dark), -2px -2px 4px var(--shadow-light);
+            background: var(--accent-light);
+            color: white;
+        }
+
+        .chat-card.active {
+            box-shadow: inset 4px 4px 8px var(--shadow-dark), inset -4px -4px 8px var(--shadow-light);
+            background: var(--accent-color);
+            color: white;
+        }
+
+        .chat-card-info {
+            margin-left: 15px;
+            flex-grow: 1;
+        }
+        .chat-card-info h4 {
+            margin: 0;
+            font-size: 1.1em;
+        }
+        .chat-card-info p {
+            margin: 2px 0 0 0;
+            font-size: 0.85em;
+            color: var(--text-secondary);
+        }
+        .chat-card.active .chat-card-info p {
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .chat-card-avatar {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            background: var(--accent-color);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5em;
+        }
+        
+        .chat-card-info span {
+            font-size: 0.9em;
+            margin-left: 5px;
+        }
+
+        /* Active Chat */
+        #active-chat-container {
+            display: flex;
+            flex-direction: column;
+        }
+
+        #chat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        #chat-messages {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 15px 0;
+        }
+
+        #chat-input-area {
+            display: flex;
+            gap: 10px;
+            padding-top: 15px;
+            border-top: 1px solid var(--glass-border);
+        }
+
+        #message-input {
+            flex-grow: 1;
+            padding: 15px;
+            border-radius: 18px;
+        }
+
+        #send-button {
+            width: 60px;
+            padding: 0;
+            border-radius: 18px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.5em;
+        }
+
+        .message-bubble {
+            max-width: 60%;
+            padding: 10px 15px;
+            border-radius: 18px;
+            margin-bottom: 10px;
+            line-height: 1.4;
+            word-wrap: break-word;
+            font-size: var(--message-font-size, 1em); /* Переменная для размера */
+        }
+
+        .message-bubble.self {
+            background-color: var(--chat-bubble-self);
+            color: var(--chat-text-self);
+            margin-left: auto;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message-bubble.other {
+            background-color: var(--chat-bubble-other);
+            color: var(--chat-text-other);
+            margin-right: auto;
+            border-bottom-left-radius: 4px;
+        }
+
+        /* ========================================================= */
+        /* Settings View & Admin Panel (Modals) */
+        /* ========================================================= */
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.4);
+            display: none; /* Скрыто по умолчанию */
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            width: 90%;
+            max-width: 600px;
+            padding: 30px;
+        }
+
+        .setting-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .setting-item h4 {
+            margin: 0;
+        }
+
+        /* Toggle switch */
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--shadow-dark);
+            transition: .4s;
+            border-radius: 34px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: var(--accent-color);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+
+        /* Admin Panel specific */
+        #admin-panel-content .neumorph-input, #admin-panel-content select, #admin-panel-content button {
+            margin-bottom: 10px;
+        }
+
+        /* Hidden Admin Trigger */
+        #admin-trigger {
+            position: fixed;
+            right: 10px;
+            bottom: 10px;
+            width: 16px;
+            height: 16px;
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 4px;
+            cursor: pointer;
+            z-index: 500;
+        }
+
+        /* Neumorphic Input & Select */
+        .neumorph-select {
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            width: 100%;
+            border: none;
+            border-radius: 12px;
+            padding: 10px 20px;
+            font-size: 1em;
+            box-shadow: 6px 6px 12px var(--shadow-dark), -6px -6px 12px var(--shadow-light);
+            background: var(--surface-color);
+            color: var(--text-color);
+            transition: all 0.3s ease-in-out;
+            cursor: pointer;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="admin-trigger" onclick="XDD_App.showAdminPassPrompt()"></div>
+
+    <div id="app-container" class="glass-container">
+        
+        <div id="auth-view" class="glass-container" style="display: flex;">
+            <h2>XDD Chat 👻</h2>
+            <div id="auth-form-container">
+                <form id="login-form" class="auth-form">
+                    <input type="text" id="login-username" class="neumorph-input" placeholder="Имя пользователя" required>
+                    <input type="password" id="login-password" class="neumorph-input" placeholder="Пароль" required>
+                    <div id="login-error" class="error-message" style="display: none;"></div>
+                    <button type="submit" class="neumorph-btn accent-btn">Войти</button>
+                </form>
+                
+                <form id="register-form" class="auth-form" style="display: none;">
+                    <input type="text" id="register-email" class="neumorph-input" placeholder="Email (для примера)" required>
+                    <input type="text" id="register-username" class="neumorph-input" placeholder="Имя пользователя (5-16, a-z, 0-9)" required>
+                    <input type="password" id="register-password" class="neumorph-input" placeholder="Пароль" required>
+                    <div id="register-error" class="error-message" style="display: none;"></div>
+                    <button type="submit" class="neumorph-btn accent-btn">Зарегистрироваться</button>
+                </form>
+            </div>
+            
+            <button id="toggle-auth-btn" class="neumorph-btn" onclick="XDD_App.toggleAuthMode()">Перейти к Регистрации</button>
+        </div>
+
+        <div id="chat-view" style="display: none;">
+            
+            <div id="chat-list-container" class="glass-container">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h3>Чаты</h3>
+                    <button class="neumorph-btn" style="padding: 5px 10px;" onclick="XDD_App.showSettingsModal()">⚙️</button>
+                </div>
+                <input type="text" id="chat-search" class="neumorph-input" placeholder="Поиск по нику..." oninput="XDD_App.renderChatList()">
+                <div id="chat-list">
+                    </div>
+            </div>
+
+            <div id="active-chat-container" class="glass-container">
+                <div id="chat-header">
+                    <h3 id="current-chat-name">Выберите чат...</h3>
+                    <span id="current-chat-status"></span>
+                </div>
+                
+                <div id="chat-messages">
+                    <div style="text-align: center; color: var(--text-secondary);">
+                        <p id="chat-placeholder">Выберите чат, чтобы начать общение.</p>
+                    </div>
+                </div>
+                
+                <div id="chat-input-area" style="display: none;">
+                    <input type="text" id="message-input" class="neumorph-input" placeholder="Напишите сообщение...">
+                    <button id="send-button" class="neumorph-btn accent-btn" onclick="XDD_App.sendMessage()">🚀</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div id="settings-modal" class="modal-overlay" onclick="if(event.target.id === 'settings-modal') XDD_App.closeModal('settings-modal')">
+        <div class="modal-content glass-container">
+            <h2 style="margin-top: 0;">⚙️ Настройки Профиля</h2>
+            
+            <div class="setting-item">
+                <h4>Профиль: <span id="settings-username"></span> <span id="settings-verification-icon"></span><span id="settings-premium-icon"></span></h4>
+                <p>Баланс: <span id="xdd-coin-balance"></span> XDD Coin</p>
+            </div>
+
+            <h3 style="margin-top: 20px;">💰 XDD Coin & Premium</h3>
+            <div style="display: flex; gap: 10px;">
+                <button class="neumorph-btn" onclick="XDD_App.buyXDD(100)">+100 XDD Coin</button>
+                <button class="neumorph-btn" onclick="XDD_App.buyXDD(500)">+500 XDD Coin</button>
+            </div>
+            <button class="neumorph-btn accent-btn" style="width: 100%; margin-top: 10px;" onclick="XDD_App.buyPremium()">
+                Купить Premium (999 XDD Coin)
+            </button>
+            
+            <h3 style="margin-top: 20px;">🎨 Темы Оформления</h3>
+            <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                <button class="neumorph-btn" onclick="XDD_App.setTheme('light')">Светлая</button>
+                <button class="neumorph-btn" onclick="XDD_App.setTheme('dark')">Тёмная</button>
+                <button class="neumorph-btn" onclick="XDD_App.setTheme('contrast')">Контрастная</button>
+            </div>
+
+            <h3 style="margin-top: 20px;">🎚️ Дополнительно</h3>
+            
+            <div class="setting-item">
+                <h4>Размер Сообщений</h4>
+                <div>
+                    <button class="neumorph-btn" onclick="XDD_App.setMessageSize('small')">Малый</button>
+                    <button class="neumorph-btn" onclick="XDD_App.setMessageSize('standard')">Стандарт</button>
+                    <button class="neumorph-btn" onclick="XDD_App.setMessageSize('large')">Крупный</button>
+                </div>
+            </div>
+
+            <div class="setting-item">
+                <h4>Показывать статус Онлайн</h4>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="online-status-toggle" onchange="XDD_App.toggleOnlineStatus(this.checked)">
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <button class="neumorph-btn" style="width: 100%; margin-top: 20px;" onclick="XDD_App.logout()">Выйти из Аккаунта</button>
+        </div>
+    </div>
+    
+    <div id="admin-pass-modal" class="modal-overlay" onclick="if(event.target.id === 'admin-pass-modal') XDD_App.closeModal('admin-pass-modal')">
+        <div class="modal-content glass-container" style="max-width: 400px;">
+            <h2 style="margin-top: 0;">🔑 Доступ к Админ Панели</h2>
+            <input type="password" id="admin-password-input" class="neumorph-input" placeholder="Введите пароль">
+            <div id="admin-pass-error" class="error-message" style="display: none;"></div>
+            <button class="neumorph-btn accent-btn" style="width: 100%;" onclick="XDD_App.authenticateAdmin()">Войти</button>
+        </div>
+    </div>
+
+    <div id="admin-panel-modal" class="modal-overlay" onclick="if(event.target.id === 'admin-panel-modal') XDD_App.closeModal('admin-panel-modal')">
+        <div id="admin-panel-content" class="modal-content glass-container">
+            <h2 style="margin-top: 0;">👑 Админ Панель</h2>
+            
+            <h3>Управление Пользователями</h3>
+            <select id="admin-user-select" class="neumorph-select" onchange="XDD_App.renderAdminPanel()"></select>
+            
+            <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                <button class="neumorph-btn accent-btn" style="flex-grow: 1;" onclick="XDD_App.toggleVerification()">Присвоить/Снять 🛡️</button>
+            </div>
+
+            <h4>Выдача Coin</h4>
+            <div style="display: flex; gap: 10px;">
+                <input type="number" id="admin-coin-amount" class="neumorph-input" placeholder="Сумма XDD Coin" value="100">
+                <button class="neumorph-btn accent-btn" onclick="XDD_App.grantXDD()">Начислить</button>
+            </div>
+
+            <h4>Временный Бан</h4>
+            <div style="display: flex; gap: 10px;">
+                <button class="neumorph-btn" onclick="XDD_App.banUser(3600)">Бан на 1 час</button>
+                <button class="neumorph-btn" onclick="XDD_App.banUser(86400)">Бан на 1 день</button>
+                <button class="neumorph-btn" onclick="XDD_App.banUser(604800)">Бан на 7 дней</button>
+            </div>
+            
+            <h3 style="margin-top: 20px;">Ответы Поддержки</h3>
+            <div id="support-requests">
+                <p id="no-support-requests">Нет новых запросов в поддержку.</p>
+            </div>
+        </div>
+    </div>
+    
+    <div id="toast-notification" style="
+        position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+        background-color: var(--accent-color); color: white; padding: 10px 20px;
+        border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        opacity: 0; transition: opacity 0.5s, transform 0.5s; z-index: 2000;
+    ">
+        Сообщение уведомления
+    </div>
+
+    <script>
+        // =========================================================
+        // JavaScript: Имитация Бэкенда и Управление Состоянием (XDD_DB)
+        // =========================================================
+
+        const XDD_DB = {
+            users: [
+                { id: 1, email: 'admin@xdd.chat', username: 'Admin', password: '1908', isVerified: true, isPremium: true, xddCoinBalance: 999999, chats: [1] },
+                { id: 2, email: 'support@xdd.chat', username: 'Support Team', password: 'N/A', isVerified: true, isPremium: false, xddCoinBalance: 0, chats: [1] }
+            ],
+            chats: [
+                { 
+                    id: 1, 
+                    participants: ['Admin', 'Support Team'], 
+                    messages: [
+                        { sender: 'Support Team', text: 'Добро пожаловать в XDD Chat! Мы всегда готовы помочь.', timestamp: Date.now() - 3600000 }
+                    ]
+                }
+            ],
+            currentUser: null,
+            currentChat: null,
+            adminPass: '1908'
+        };
+
+        const XDD_App = {
+            
+            // --- CORE STATE MANAGEMENT ---
+
+            init() {
+                // Пытаемся восстановить состояние из localStorage
+                const storedDB = localStorage.getItem('XDD_DB');
+                if (storedDB) {
+                    Object.assign(XDD_DB, JSON.parse(storedDB));
+                } else {
+                    // Инициализируем Support Chat для всех начальных пользователей
+                    XDD_DB.users[0].chats.push(1); 
+                    XDD_DB.users[1].chats.push(1); 
+                }
+
+                // Пытаемся войти автоматически
+                if (XDD_DB.currentUser) {
+                    this.showChatView();
+                    this.renderChatList();
+                } else {
+                    document.getElementById('auth-view').style.display = 'flex';
+                    document.getElementById('chat-view').style.display = 'none';
+                }
+                
+                // Устанавливаем размер сообщений по умолчанию
+                document.documentElement.style.setProperty('--message-font-size', '1em');
+                this.setTheme(localStorage.getItem('XDD_Theme') || 'light');
+            },
+
+            saveState() {
+                localStorage.setItem('XDD_DB', JSON.stringify(XDD_DB));
+            },
+            
+            showToast(message, isError = false) {
+                const toast = document.getElementById('toast-notification');
+                toast.textContent = message;
+                toast.style.backgroundColor = isError ? varCSS('--error-color') : varCSS('--accent-color');
+                toast.style.opacity = 1;
+                toast.style.transform = 'translate(-50%, 0)';
+
+                setTimeout(() => {
+                    toast.style.opacity = 0;
+                    toast.style.transform = 'translate(-50%, 20px)';
+                }, 3000);
+            },
+            
+            // Получение CSS-переменной для JS
+            varCSS(name) {
+                return getComputedStyle(document.documentElement).getPropertyValue(name);
+            },
+
+            // --- AUTH LOGIC ---
+            
+            validateUsername(username) {
+                if (username.length < 5 || username.length > 16) {
+                    return 'Имя пользователя должно содержать от 5 до 16 символов.';
+                }
+                if (!/^[a-zA-Z0-9]+$/.test(username)) {
+                    return 'Имя пользователя может содержать только латинские буквы и цифры.';
+                }
+                return null;
+            },
+
+            toggleAuthMode() {
+                const isLogin = document.getElementById('login-form').style.display !== 'none';
+                document.getElementById('login-form').style.display = isLogin ? 'none' : 'block';
+                document.getElementById('register-form').style.display = isLogin ? 'block' : 'none';
+                document.getElementById('toggle-auth-btn').textContent = isLogin ? 'Перейти ко Входу' : 'Перейти к Регистрации';
+                document.getElementById('login-error').style.display = 'none';
+                document.getElementById('register-error').style.display = 'none';
+            },
+
+            login(e) {
+                e.preventDefault();
+                const username = document.getElementById('login-username').value;
+                const password = document.getElementById('login-password').value;
+                const errorEl = document.getElementById('login-error');
+                errorEl.style.display = 'none';
+
+                const user = XDD_DB.users.find(u => u.username === username && u.password === password);
+
+                if (user) {
+                    if (user.isBannedUntil && user.isBannedUntil > Date.now()) {
+                        errorEl.textContent = `Ваш аккаунт заблокирован до ${new Date(user.isBannedUntil).toLocaleString()}.`;
+                        errorEl.style.display = 'block';
+                        return;
+                    }
+                    XDD_DB.currentUser = user;
+                    this.showChatView();
+                    this.renderChatList();
+                    this.saveState();
+                } else {
+                    errorEl.textContent = 'Неверное имя пользователя или пароль.';
+                    errorEl.style.display = 'block';
+                }
+            },
+
+            register(e) {
+                e.preventDefault();
+                const email = document.getElementById('register-email').value;
+                const username = document.getElementById('register-username').value;
+                const password = document.getElementById('register-password').value;
+                const errorEl = document.getElementById('register-error');
+                errorEl.style.display = 'none';
+
+                const validationError = this.validateUsername(username);
+                if (validationError) {
+                    errorEl.textContent = validationError;
+                    errorEl.style.display = 'block';
+                    return;
+                }
+
+                if (XDD_DB.users.some(u => u.username === username)) {
+                    errorEl.textContent = 'Пользователь с таким именем уже существует.';
+                    errorEl.style.display = 'block';
+                    return;
+                }
+                
+                const newUser = {
+                    id: XDD_DB.users.length + 1,
+                    email,
+                    username,
+                    password,
+                    isVerified: false,
+                    isPremium: false,
+                    xddCoinBalance: 500, // Начальный баланс
+                    isOnline: true,
+                    chats: [1] // Автоматическое добавление чата с Support Team
+                };
+
+                XDD_DB.users.push(newUser);
+                XDD_DB.currentUser = newUser;
+                this.showChatView();
+                this.renderChatList();
+                this.saveState();
+            },
+
+            logout() {
+                XDD_DB.currentUser = null;
+                XDD_DB.currentChat = null;
+                document.getElementById('auth-view').style.display = 'flex';
+                document.getElementById('chat-view').style.display = 'none';
+                this.closeModal('settings-modal');
+                this.saveState();
+            },
+
+            // --- UI/VIEW MANAGEMENT ---
+
+            showChatView() {
+                document.getElementById('auth-view').style.display = 'none';
+                document.getElementById('chat-view').style.display = 'grid';
+            },
+
+            renderChatList() {
+                const chatListEl = document.getElementById('chat-list');
+                const filter = document.getElementById('chat-search').value.toLowerCase();
+                chatListEl.innerHTML = '';
+
+                if (!XDD_DB.currentUser) return;
+
+                // Получаем все чаты, в которых участвует текущий пользователь
+                const userChats = XDD_DB.chats.filter(chat => 
+                    chat.participants.includes(XDD_DB.currentUser.username)
+                );
+
+                userChats.forEach(chat => {
+                    // Находим собеседника
+                    const otherUserName = chat.participants.find(name => name !== XDD_DB.currentUser.username) || chat.participants[0];
+                    const otherUser = XDD_DB.users.find(u => u.username === otherUserName);
+                    
+                    // Фильтрация по поиску
+                    if (filter && !otherUserName.toLowerCase().includes(filter)) return;
+
+                    const lastMessage = chat.messages[chat.messages.length - 1];
+                    const isActive = XDD_DB.currentChat && XDD_DB.currentChat.id === chat.id;
+
+                    const card = document.createElement('div');
+                    card.className = `chat-card ${isActive ? 'active' : ''}`;
+                    card.setAttribute('data-chat-id', chat.id);
+                    card.onclick = () => this.setActiveChat(chat.id);
+
+                    const userIcon = otherUserName === 'Support Team' ? '🛡️' : otherUserName.charAt(0).toUpperCase();
+
+                    const premiumIcon = otherUser && otherUser.isPremium ? '👑' : '';
+                    const verifiedIcon = otherUser && otherUser.isVerified ? '🛡️' : '';
+                    
+                    card.innerHTML = `
+                        <div class="chat-card-avatar">${userIcon}</div>
+                        <div class="chat-card-info">
+                            <h4>${verifiedIcon} ${otherUserName} ${premiumIcon}</h4>
+                            <p>${lastMessage ? (lastMessage.sender === XDD_DB.currentUser.username ? 'Вы: ' : '') + lastMessage.text.substring(0, 30) + (lastMessage.text.length > 30 ? '...' : '') : 'Начните чат!'}</p>
+                        </div>
+                    `;
+                    chatListEl.appendChild(card);
+                });
+            },
+
+            setActiveChat(chatId) {
+                const chat = XDD_DB.chats.find(c => c.id === chatId);
+                if (!chat) return;
+
+                XDD_DB.currentChat = chat;
+                this.renderChatMessages();
+                this.renderChatList(); // Обновить стили активной карточки
+                
+                document.getElementById('chat-input-area').style.display = 'flex';
+                document.getElementById('chat-placeholder').style.display = 'none';
+            },
+
+            renderChatMessages() {
+                const messagesEl = document.getElementById('chat-messages');
+                messagesEl.innerHTML = '';
+                const chat = XDD_DB.currentChat;
+
+                if (!chat) return;
+
+                const otherUserName = chat.participants.find(name => name !== XDD_DB.currentUser.username) || chat.participants[0];
+                const otherUser = XDD_DB.users.find(u => u.username === otherUserName);
+                const premiumIcon = otherUser && otherUser.isPremium ? '👑' : '';
+                const verifiedIcon = otherUser && otherUser.isVerified ? '🛡️' : '';
+                
+                document.getElementById('current-chat-name').innerHTML = `${verifiedIcon} ${otherUserName} ${premiumIcon}`;
+                document.getElementById('current-chat-status').textContent = otherUser && otherUser.isOnline ? 'Онлайн' : '';
+
+                chat.messages.forEach(msg => {
+                    const bubble = document.createElement('div');
+                    bubble.className = `message-bubble ${msg.sender === XDD_DB.currentUser.username ? 'self' : 'other'}`;
+                    bubble.textContent = msg.text;
+                    messagesEl.appendChild(bubble);
+                });
+
+                messagesEl.scrollTop = messagesEl.scrollHeight; // Прокрутка вниз
+            },
+
+            sendMessage() {
+                const inputEl = document.getElementById('message-input');
+                const text = inputEl.value.trim();
+                
+                if (!text || !XDD_DB.currentChat) return;
+
+                const newMsg = {
+                    sender: XDD_DB.currentUser.username,
+                    text: text,
+                    timestamp: Date.now()
+                };
+
+                XDD_DB.currentChat.messages.push(newMsg);
+                inputEl.value = '';
+                
+                this.renderChatMessages();
+                this.renderChatList();
+                this.saveState();
+
+                // Имитация ответа Support Team
+                if (XDD_DB.currentChat.participants.includes('Support Team')) {
+                    setTimeout(() => this.supportTeamResponse(newMsg), 1500);
+                }
+            },
+
+            supportTeamResponse(userMsg) {
+                if (userMsg.sender === 'Support Team') return;
+                
+                let responseText = "Мы получили ваше сообщение и уже работаем над ответом!";
+                
+                if (userMsg.text.toLowerCase().includes('привет')) {
+                    responseText = "Привет! Чем я могу вам помочь сегодня?";
+                } else if (userMsg.text.toLowerCase().includes('coin')) {
+                    responseText = "XDD Coin - наша внутренняя валюта. Вы можете купить их в Настройках, чтобы приобрести Premium.";
+                }
+
+                XDD_DB.currentChat.messages.push({
+                    sender: 'Support Team',
+                    text: responseText,
+                    timestamp: Date.now()
+                });
+
+                this.renderChatMessages();
+                this.renderChatList();
+                this.saveState();
+            },
+
+            // --- SETTINGS & PREMIUM ---
+
+            showSettingsModal() {
+                const user = XDD_DB.currentUser;
+                if (!user) return;
+
+                document.getElementById('settings-username').textContent = user.username;
+                document.getElementById('xdd-coin-balance').textContent = user.xddCoinBalance;
+                document.getElementById('settings-verification-icon').textContent = user.isVerified ? '🛡️' : '';
+                document.getElementById('settings-premium-icon').textContent = user.isPremium ? '👑' : '';
+                document.getElementById('online-status-toggle').checked = user.isOnline !== false; // По умолчанию true
+
+                document.getElementById('settings-modal').style.display = 'flex';
+            },
+
+            closeModal(id) {
+                document.getElementById(id).style.display = 'none';
+            },
+
+            buyXDD(amount) {
+                XDD_DB.currentUser.xddCoinBalance += amount;
+                document.getElementById('xdd-coin-balance').textContent = XDD_DB.currentUser.xddCoinBalance;
+                this.saveState();
+                this.showToast(`Вы купили ${amount} XDD Coin! Баланс: ${XDD_DB.currentUser.xddCoinBalance}`);
+            },
+
+            buyPremium() {
+                const cost = 999;
+                const user = XDD_DB.currentUser;
+
+                if (user.isPremium) {
+                    this.showToast('У вас уже есть Premium!', true);
+                    return;
+                }
+
+                if (user.xddCoinBalance >= cost) {
+                    user.xddCoinBalance -= cost;
+                    user.isPremium = true;
+                    document.getElementById('xdd-coin-balance').textContent = user.xddCoinBalance;
+                    document.getElementById('settings-premium-icon').textContent = '👑';
+                    this.showToast('Поздравляем! Вы приобрели Premium! 👑');
+                    this.renderChatList();
+                    this.renderChatMessages(); // Обновить иконку в хедере чата, если открыт
+                    this.saveState();
+                } else {
+                    this.showToast(`Недостаточно XDD Coin. Нужно ${cost}, у вас ${user.xddCoinBalance}.`, true);
+                }
+            },
+
+            setTheme(theme) {
+                document.body.className = '';
+                document.body.classList.add(`theme-${theme}`);
+                localStorage.setItem('XDD_Theme', theme);
+            },
+
+            setMessageSize(size) {
+                let fontSize = '1em';
+                if (size === 'small') fontSize = '0.9em';
+                if (size === 'large') fontSize = '1.1em';
+                
+                document.documentElement.style.setProperty('--message-font-size', fontSize);
+            },
+
+            toggleOnlineStatus(isOnline) {
+                XDD_DB.currentUser.isOnline = isOnline;
+                this.saveState();
+                this.showToast(`Статус онлайн теперь ${isOnline ? 'виден' : 'скрыт'}.`);
+            },
+            
+            // --- ADMIN PANEL ---
+
+            showAdminPassPrompt() {
+                document.getElementById('admin-pass-input').value = '';
+                document.getElementById('admin-pass-modal').style.display = 'flex';
+                document.getElementById('admin-pass-error').style.display = 'none';
+            },
+
+            authenticateAdmin() {
+                const password = document.getElementById('admin-password-input').value;
+                const errorEl = document.getElementById('admin-pass-error');
+                
+                if (password === XDD_DB.adminPass) {
+                    this.closeModal('admin-pass-modal');
+                    this.showAdminPanel();
+                } else {
+                    errorEl.textContent = 'Неверный пароль.';
+                    errorEl.style.display = 'block';
+                }
+            },
+
+            showAdminPanel() {
+                const selectEl = document.getElementById('admin-user-select');
+                selectEl.innerHTML = XDD_DB.users
+                    .filter(u => u.username !== 'Support Team')
+                    .map(u => `<option value="${u.username}">${u.username} (${u.isVerified ? '🛡️' : ''}${u.isPremium ? '👑' : ''})</option>`)
+                    .join('');
+
+                this.renderAdminPanel();
+                this.renderSupportRequests();
+                document.getElementById('admin-panel-modal').style.display = 'flex';
+            },
+
+            renderAdminPanel() {
+                const selectedUsername = document.getElementById('admin-user-select').value;
+                const selectedUser = XDD_DB.users.find(u => u.username === selectedUsername);
+                if (!selectedUser) return;
+                
+                // Здесь можно обновить дополнительные детали о выбранном пользователе, если нужно.
+            },
+            
+            toggleVerification() {
+                const selectedUsername = document.getElementById('admin-user-select').value;
+                const user = XDD_DB.users.find(u => u.username === selectedUsername);
+                if (!user) return;
+                
+                user.isVerified = !user.isVerified;
+                this.showToast(`Пользователю ${user.username} ${user.isVerified ? 'присвоена' : 'снята'} верификация 🛡️`);
+                this.showAdminPanel();
+                this.renderChatList();
+                this.saveState();
+            },
+
+            grantXDD() {
+                const selectedUsername = document.getElementById('admin-user-select').value;
+                const amount = parseInt(document.getElementById('admin-coin-amount').value);
+                const user = XDD_DB.users.find(u => u.username === selectedUsername);
+
+                if (!user || isNaN(amount) || amount <= 0) {
+                    this.showToast('Некорректная сумма или пользователь.', true);
+                    return;
+                }
+
+                user.xddCoinBalance += amount;
+                this.showToast(`Начислено ${amount} XDD Coin пользователю ${user.username}.`);
+                this.showAdminPanel();
+                this.saveState();
+            },
+
+            banUser(durationSeconds) {
+                const selectedUsername = document.getElementById('admin-user-select').value;
+                const user = XDD_DB.users.find(u => u.username === selectedUsername);
+                if (!user) return;
+
+                user.isBannedUntil = Date.now() + durationSeconds * 1000;
+                this.showToast(`Пользователь ${user.username} заблокирован до ${new Date(user.isBannedUntil).toLocaleString()}.`, true);
+                this.saveState();
+            },
+            
+            renderSupportRequests() {
+                const supportRequestsEl = document.getElementById('support-requests');
+                supportRequestsEl.innerHTML = '';
+                
+                const supportChat = XDD_DB.chats.find(c => c.id === 1);
+                if (!supportChat) return;
+                
+                const userMessages = supportChat.messages.filter(msg => msg.sender !== 'Support Team');
+                
+                if (userMessages.length === 0) {
+                    supportRequestsEl.innerHTML = '<p id="no-support-requests">Нет новых запросов в поддержку.</p>';
+                    return;
+                }
+
+                userMessages.forEach((msg, index) => {
+                    const requestDiv = document.createElement('div');
+                    requestDiv.style.border = '1px solid var(--glass-border)';
+                    requestDiv.style.borderRadius = '12px';
+                    requestDiv.style.padding = '10px';
+                    requestDiv.style.marginBottom = '10px';
+                    requestDiv.innerHTML = `
+                        <p>@${msg.sender} спрашивает: <strong>${msg.text}</strong></p>
+                        <div id="admin-reply-${index}" style="margin-top: 10px; display: flex; gap: 10px;">
+                            <input type="text" id="reply-input-${index}" class="neumorph-input" style="flex-grow: 1;" placeholder="Ваш ответ...">
+                            <button class="neumorph-btn accent-btn" onclick="XDD_App.adminReplyToSupport(${index}, true)">Ответить</button>
+                            <button class="neumorph-btn" onclick="XDD_App.adminReplyToSupport(${index}, false)">Отклонить</button>
+                        </div>
+                    `;
+                    supportRequestsEl.appendChild(requestDiv);
+                });
+            },
+            
+            adminReplyToSupport(messageIndex, isReply) {
+                const supportChat = XDD_DB.chats.find(c => c.id === 1);
+                const userMessage = supportChat.messages.filter(msg => msg.sender !== 'Support Team')[messageIndex];
+                
+                if (!userMessage) return;
+
+                let responseText;
+                if (isReply) {
+                    const replyInput = document.getElementById(`reply-input-${messageIndex}`);
+                    responseText = replyInput.value.trim();
+                    if (!responseText) {
+                        this.showToast('Введите текст ответа.', true);
+                        return;
+                    }
+                } else {
+                    responseText = "Ваш запрос был рассмотрен, но отклонен.";
+                }
+
+                // Добавляем ответ в чат поддержки (должен увидеть пользователь userMessage.sender)
+                supportChat.messages.push({
+                    sender: 'Support Team',
+                    text: responseText,
+                    timestamp: Date.now()
+                });
+                
+                // Удаляем оригинальное сообщение, чтобы оно не отображалось в очереди админа.
+                // В реальном приложении это была бы отметка "отработано".
+                const originalIndex = supportChat.messages.indexOf(userMessage);
+                if (originalIndex !== -1) {
+                    supportChat.messages.splice(originalIndex, 1);
+                }
+
+                this.showToast(`Ответ отправлен пользователю ${userMessage.sender}.`);
+                this.renderSupportRequests();
+                this.renderChatMessages(); // Если админ сам в чате поддержки
+                this.saveState();
+            }
+
+        };
+
+        // --- Инициализация и Обработчики Событий ---
+        document.addEventListener('DOMContentLoaded', () => {
+            XDD_App.init();
+            document.getElementById('login-form').addEventListener('submit', XDD_App.login.bind(XDD_App));
+            document.getElementById('register-form').addEventListener('submit', XDD_App.register.bind(XDD_App));
+
+            // Отправка сообщения по Enter
+            document.getElementById('message-input').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    XDD_App.sendMessage();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
